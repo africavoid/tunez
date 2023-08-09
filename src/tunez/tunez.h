@@ -25,3 +25,16 @@ typedef struct {
 	/* TODO make this resizable */
 	char *fns[1024]; 
 }SCR;
+
+void mov_down(SCR *scr);
+void mov_up(SCR *scr);
+
+struct KEY_MAP {
+	int ch;
+	void (*fn)(SCR *scr);
+};
+
+struct KEY_MAP key_map[] = {
+	{ 'j', mov_down }, 
+	{ 'k', mov_up },
+};

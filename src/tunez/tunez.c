@@ -31,7 +31,38 @@ void create_menu (SCR *scr)
 	/* creating the menu */
 	scr->men = new_menu((ITEM **) scr->items);
 	post_menu(scr->men);
-	wrefresh(scr->win);
+	refresh();
+}
+
+void mov_down (SCR *scr)
+{
+	menu_driver(scr->men, REQ_DOWN_ITEM);
+}
+
+void mov_up (SCR *scr)
+{
+	menu_driver(scr->men, REQ_UP_ITEM);
+}
+
+/* the main loop */
+void input_loop (SCR *scr)
+{
+	int ch, i;
+
+	while (true)
+	{
+		i = 0;	
+		ch = getch();
+
+		for (; key_map[i].ch != ch; i++)
+		{
+			if (key_map[i].ch == (char) 0)
+				break;
+		}
+	
+		if (key_map[i].ch == ch)
+			key_map[i].fn(scr);
+	}
 }
 
 int scan_dir (SCR *scr)
@@ -82,6 +113,7 @@ static int global_setup (const char **argv)
 	/* some setup stuff */
 	noecho();
 	cbreak();
+	curs_set(0);
 	
 	/* creating window */
 	scr->win = newwin(scr->max_y, scr->max_x, START_Y, START_X);
@@ -94,7 +126,7 @@ static int global_setup (const char **argv)
 	}
 
 	create_menu(scr);
-	getch();
+	input_loop(scr);
 	global_cleanup(scr);
 	return 0;	
 }
