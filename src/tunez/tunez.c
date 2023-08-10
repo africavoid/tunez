@@ -2,6 +2,12 @@
 	This is the main file for the tunez project
 	tunez is a curses frontend for playing music
 	it relies on wavplay to play wavfiles
+	TODO:
+	- fix the type_check to check for dirs
+	- create a nice interface
+	- make a way of playing the music through wavplay
+	- make a way of skipping pausing etc
+	- config file
 */
 
 
@@ -24,35 +30,80 @@ void create_menu (SCR *scr)
 	
 	/* assigned fns (file names) to on screen items */
 	for (int i = 0; i < scr->n_items; i++)
-		scr->items[i] = new_item(scr->fns[i], "len");
+		scr->items[i] = new_item(scr->fns[i], TENWSP);
 
 	scr->items[scr->n_items] = (ITEM *) NULL;
 	
 	/* creating the menu */
 	scr->men = new_menu((ITEM **) scr->items);
+
+	/* creating menu window */
+	set_menu_win(scr->men, scr->win);
+	set_menu_sub(scr->men, derwin(scr->win, 0, 0, 1, 1));
+
+	/* set the indicator */
+	set_menu_mark(scr->men, MARK);
+	
+	/* decorations */
+	box(scr->win, 0, 0);
+
+	/* posting to screen */	
 	post_menu(scr->men);
-	refresh();
+	wrefresh(scr->win);
 }
 
 void mov_down (SCR *scr)
 {
+	if (scr->cur_y < scr->fns_max)
+		scr->cur_y++;
 	menu_driver(scr->men, REQ_DOWN_ITEM);
 }
 
 void mov_up (SCR *scr)
 {
+	if (scr->cur_y > 0)
+		scr->cur_y--;
 	menu_driver(scr->men, REQ_UP_ITEM);
 }
 
+void goto_top (SCR *scr)
+{
+	scr->cur_y = 0;
+	menu_driver(scr->men, REQ_FIRST_ITEM);
+}
+
+void goto_bot (SCR *scr)
+{
+	scr->cur_y = scr->fns_max;
+	menu_driver(scr->men, REQ_LAST_ITEM);
+}
+
+void sel (SCR *scr)
+{
+	size_t i = 0;
+
+	menu_driver(scr->men, REQ_TOGGLE_ITEM);
+	scr->cur_item = current_item(scr->men);
+
+	while (scr->fns_type[scr->fns_max] != formats[i].ft)
+	{
+		if (formats[i+1].ft != (int) 0)
+			i++;
+		else
+			break;
+	}
+}
+
 /* the main loop */
-void input_loop (SCR *scr)
+static void input_loop (SCR *scr)
 {
 	int ch, i;
 
 	while (true)
 	{
 		i = 0;	
-		ch = getch();
+		scr->cur_y = 0;
+		ch = wgetch(scr->win);
 
 		for (; key_map[i].ch != ch; i++)
 		{
@@ -63,6 +114,48 @@ void input_loop (SCR *scr)
 		if (key_map[i].ch == ch)
 			key_map[i].fn(scr);
 	}
+}
+
+
+unsigned int type_check (const char *n)
+{
+	size_t len, j = 0;
+	bool match = false;
+	char *tmp;
+	
+	tmp = malloc(KB);
+	if (tmp == NULL)
+	{
+		fprintf(stderr, "ERROR: malloc (tmp)\n");
+		return -1;
+	}
+
+	len = strlen(n);
+
+	for (size_t i = len; n[i] != '.'; i--)
+		strcat(tmp, &n[i]);
+
+
+	while (formats[j].ff != NULL)
+	{
+		if (tmp == formats[j].ff)
+		{
+			match = true;
+			break;
+		}
+
+		if (formats[j+1].ff != NULL)
+			j++;
+		else
+			break;
+	}
+	
+	free(tmp); 
+	
+	if (match == true)
+		return formats[j].ft;
+
+	return -1;
 }
 
 int scan_dir (SCR *scr)
@@ -83,6 +176,7 @@ int scan_dir (SCR *scr)
 	{
 		scr->fns[i] = strdup(entry->d_name);
 		scr->fns_max = i;
+		scr->fns_type[i] = type_check(scr->fns[i]);
 	}
 
 	closedir(dp);
@@ -135,7 +229,8 @@ static void global_cleanup (SCR *scr)
 {
 	for (int i = 0; scr->items[i] != NULL; i++)
 		free_item(scr->items[i]);
-	
+
+	unpost_menu(scr->men);	
 	free_menu(scr->men);
 	endwin();
 	free(scr);	
