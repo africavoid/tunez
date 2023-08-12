@@ -58,7 +58,7 @@ int parse_cmd (SCR *scr, const char *cmd)
 	bool valid = false;
 	size_t src_len = strlen(cmd);
 	char *cmd_name = malloc(KB);
-	char *argv[cmd_len];
+	char *argv[src_len];
 
 	for (size_t i = 0; i < src_len; i++)
 	{
