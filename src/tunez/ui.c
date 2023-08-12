@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include <curses.h>
 #include <menu.h>
 #include "error.h"
@@ -53,11 +56,11 @@ void mov_up (SCR *scr)
 int parse_cmd (SCR *scr, const char *cmd)
 {
 	bool valid = false;
-	size_t cmd_len = strlen(cmd);
+	size_t src_len = strlen(cmd);
 	char *cmd_name = malloc(KB);
 	char *argv[cmd_len];
 
-	for (size_t i = 0; i < cmd_len; i++)
+	for (size_t i = 0; i < src_len; i++)
 	{
 		if (cmd[i] != WHITESPACE) strcat(cmd_name, &cmd[i]);
 	}
