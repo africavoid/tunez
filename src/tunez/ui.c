@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <curses.h>
 #include <menu.h>
+#include "playback.h"
 #include "error.h"
 #include "ui.h"
 #include "cmds.h"
@@ -63,6 +64,8 @@ int parse_cmd (SCR *scr, const char *cmd)
 	size_t src_len = strlen(cmd);
 	size_t k = 0;
 	char *argv[src_len];
+	
+	if (strcmp(cmd, "play") == 0) playback_entry("/home/will/Music/Dancehall/dude.wav", 0);
 
 	for (; cmd_kw[k].str != NULL; k++)
 	{

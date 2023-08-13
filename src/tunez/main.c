@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <curses.h>
 #include <menu.h>
+#include "playback.h"
 #include "ui.h"
 #include "error.h"
 
