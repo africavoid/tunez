@@ -64,4 +64,6 @@ struct KEY_MAP key_map[] = {
 	{ 'G', goto_bot },
 };
 
+void ui_clean (SCR *scr);
+
 #include "ui.c"

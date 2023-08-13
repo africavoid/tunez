@@ -13,5 +13,6 @@ const char *em[] = {
 };
 
 int printe (int ec);
+void printce (SCR *scr, const char *errstr);
 
 #include "error.c"

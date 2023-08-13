@@ -5,6 +5,7 @@
 #include <menu.h>
 #include "error.h"
 #include "ui.h"
+#include "cmds.h"
 
 /*
 	creates the menu on the screen of all
@@ -39,6 +40,7 @@ void create_menu (SCR *scr)
 	wrefresh(scr->win);
 }
 
+/* moves down menu */
 void mov_down (SCR *scr)
 {
 	if (scr->cur_y < scr->fns_max)
@@ -46,6 +48,7 @@ void mov_down (SCR *scr)
 	menu_driver(scr->men, REQ_DOWN_ITEM);
 }
 
+/* moves up menu */
 void mov_up (SCR *scr)
 {
 	if (scr->cur_y > 0)
@@ -53,26 +56,35 @@ void mov_up (SCR *scr)
 	menu_driver(scr->men, REQ_UP_ITEM);
 }
 
+/* parses string and calls function if it's a valid cmd */
 int parse_cmd (SCR *scr, const char *cmd)
 {
 	bool valid = false;
 	size_t src_len = strlen(cmd);
-	char *cmd_name = malloc(KB);
+	size_t k = 0;
 	char *argv[src_len];
 
-	for (size_t i = 0; i < src_len; i++)
+	for (; cmd_kw[k].str != NULL; k++)
 	{
-		if (cmd[i] != WHITESPACE) strcat(cmd_name, &cmd[i]);
+		if (strcmp(cmd_kw[k].str, cmd) == 0)
+		{
+			valid = true;
+			break;
+		}
 	}
-	
-	free(cmd_name);
+
+	if (valid == true) cmd_kw[k].fn(scr, argv);
+	else return 1;
 	return 0;
 }
 
+/* enters the cmd line */
 void cmd_mode (SCR *scr)
 {
 	char *cmd = malloc(KB);
-	
+
+	if (nodelay(scr->win, 0) == ERR) printce(scr, "no delay");
+
 	/* drawing command mode : */
 	mvwprintw(scr->win, scr->max_y - 2, 1, ":");
 	wrefresh(scr->win);
@@ -80,23 +92,26 @@ void cmd_mode (SCR *scr)
 	curs_set(1);
 	echo();
 	
-	wscanw(scr->win, cmd);
+	wgetstr(scr->win, cmd);
 
 	/* send input off to be parsed */
 	if (parse_cmd(scr, cmd) != 0) printce(scr, "No such command!");
 
 	/* reset options */
+	if (nodelay(scr->win, 1) == ERR) printce(scr, "no delay");
 	curs_set(0);
 	noecho();
 	free(cmd);
 }
 
+/* moves to top of menu */
 void goto_top (SCR *scr)
 {
 	scr->cur_y = 0;
 	menu_driver(scr->men, REQ_FIRST_ITEM);
 }
 
+/* moves to bottom of menu */
 void goto_bot (SCR *scr)
 {
 	scr->cur_y = scr->fns_max;
@@ -113,6 +128,7 @@ int ui_setup (SCR *scr)
 	scr->win = newwin(scr->max_y, scr->max_x, 0, 0);
 	
 	/* generic settings for curses */
+	if (nodelay(scr->win, 1) == ERR) printce(scr, "no delay");
 	curs_set(0);
 	noecho();
 	cbreak();

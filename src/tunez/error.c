@@ -7,7 +7,8 @@ void printce (SCR *scr, const char *errstr)
 {
 	mvwprintw(scr->win, scr->max_y - 2, 1, "%s", errstr);
 	wrefresh(scr->win);
-	wgetch(scr->win);
+	curs_set(0);	
+	echo();
 } 
 
 int printe (int ec)
