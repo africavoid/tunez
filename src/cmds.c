@@ -5,13 +5,13 @@
 #include "cmds.h"
 #include "parse.h"
 
-int list_files (char *args)
+void list_files (char *arg)
 {
 	DIR *dp;
 	char *dir = malloc(1024);
 	struct dirent *entry;
 
-	dir = get_second_word(args);
+	dir = get_second_word(arg);
 
 	if (dir == NULL) dir = strndup(".", 1);
 
@@ -20,7 +20,7 @@ int list_files (char *args)
 	if (dp == NULL) 
 	{
 		fprintf(stderr, "Cannot open dir %s\n", dir);
-		return 1;
+		return;
 	}
 	
 	while ((entry = readdir(dp)) != NULL)
@@ -30,5 +30,4 @@ int list_files (char *args)
 
 	memset(dir, 0, strlen(dir));
 	free(dir);
-	return 0;
 }

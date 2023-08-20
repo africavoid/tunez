@@ -16,11 +16,12 @@ void playback_entry(char *arg);
 struct KEYS {
 	const char ch;
 	void (*fn)(void);
+	bool pause;
 };
 
 struct KEYS keys[] = {
-	{ 'p', pauseAudio },
-	{ 'u', unpauseAudio },
+	{ 'p', pauseAudio, true },
+	{ 'u', unpauseAudio, false },
 };
 
 #include "playback.c"

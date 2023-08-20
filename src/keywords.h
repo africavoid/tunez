@@ -24,7 +24,7 @@ struct FLAG_MAP flag_map[] = {
 
 struct KEYWORDS {
 	const char *str;
-	int (*fn)(char *args);
+	void (*fn)(char *arg);
 };
 
 struct KEYWORDS kw[] = {

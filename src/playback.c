@@ -15,12 +15,13 @@ static signed int keycheck (int ch)
 	return -1;
 }
 
-/* the interface for controlling
- * via terminal */
-static void controls (const char *fn)
+/* the interface for controlling via terminal */
+static void controls (char *fn)
 {
 	unsigned int ch;
 	signed int fd;
+	int time = 1000;
+	bool pause = false;
 
 	if (initscr() == NULL)
 	{
@@ -30,14 +31,25 @@ static void controls (const char *fn)
 
 	noecho();
 	curs_set(0);
-	
-	printw("Now playing %s", fn);
+	nodelay(stdscr, true);
+
+	mvprintw(0, 0, "Now playing %s", fn);
 	refresh();
 
-	while ((ch = getch()) != ENTER)  
+	for (int i = 0; i < time; i++)
 	{
-		if ((fd = keycheck(ch)) != -1) keys[fd].fn();
-		SDL_Delay(10);
+		if ((ch = getch()) == 'q') break;
+		else if ((fd = keycheck(ch)) != -1) keys[fd].fn();
+
+		SDL_Delay(1000);
+
+		pause = keys[fd].pause;
+
+		if (pause == false)
+		{
+			mvprintw(1, 0, "%d Seconds Elapsed\\%d Total\n", i, time);
+			refresh();
+		}
 	}
 
 	echo();

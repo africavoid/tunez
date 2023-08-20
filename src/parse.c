@@ -137,3 +137,24 @@ char *mono_str (char *strarr[])
 
 	return mstr;
 }
+
+char *get_extension (char *str)
+{
+	char *ex = malloc(sizeof(str));
+	size_t len = strlen(str), dot_index = 0, j;
+
+	for (; str[len] != '.'; len--)
+		dot_index = len;
+
+	if (dot_index == 0) return NULL;
+
+	j = dot_index;
+
+	do
+	{
+		strncat(ex, &str[j], 1);
+		j++;
+	} while (str[j] != (char) 0);
+
+	return ex;
+}

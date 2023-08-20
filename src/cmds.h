@@ -7,8 +7,7 @@
 
 #include "parse.h"
 
-int list_files (char *args);
-
+void list_files (char *arg);
 
 #include "cmds.c"
 #endif // CMD_H
