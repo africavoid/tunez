@@ -16,6 +16,7 @@ const char *valid_ex[] = {
 	"mp3",
 };
 
+/* makes sure file is valid */
 static bool is_file (const char *fn)
 {
 	FILE *fp;

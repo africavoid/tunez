@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <curses.h>
+#include <SDL2/SDL.h>
 
 #include "parse.h"
 #include "error.h"
