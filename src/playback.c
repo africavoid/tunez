@@ -15,6 +15,15 @@ static signed int keycheck (int ch)
 	return -1;
 }
 
+static void pause_loop (void)
+{
+	int ch;
+	while ((ch = getch()) != 'u')
+		;
+
+	unpauseAudio();
+}
+
 /* the interface for controlling via terminal */
 static void controls (char *fn)
 {
@@ -43,13 +52,10 @@ static void controls (char *fn)
 
 		SDL_Delay(1000);
 
-		pause = keys[fd].pause;
+		if (ch == 'p') pause_loop();
 
-		if (pause == false)
-		{
-			mvprintw(1, 0, "%d Seconds Elapsed\\%d Total\n", i, time);
-			refresh();
-		}
+		mvprintw(1, 0, "%d Seconds Elapsed\\%d Total\n", i, time);
+		refresh();
 	}
 
 	echo();
