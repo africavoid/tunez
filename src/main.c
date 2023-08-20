@@ -11,12 +11,34 @@
 #include "audio.h"
 #include "cmds.h"
 
+/* flag variables */
+bool background_f = false;
+bool help_f = false;
+bool playback_f = false;
+
+/* file that will be played */
+char *file_name;
+
+/* supported file types */
 const char *valid_ex[] = {
 	"wav",
 	"mp3",
 };
 
-/* makes sure file is valid */
+static int help (void)
+{
+	fprintf(stdout, "USAGE:\n");
+	fprintf(stdout, "-p [file] to play a file\n");
+	fprintf(stdout, "-b to run in background\n");
+	fprintf(stdout, "Supported file types:\n");
+
+	for (int i = 0; valid_ex[i] != NULL; i++)
+		fprintf(stdout, "%s\n", valid_ex[i]);
+
+	return 0;
+}
+
+/* checks if file exists */
 static bool is_file (const char *fn)
 {
 	FILE *fp;
@@ -28,99 +50,107 @@ static bool is_file (const char *fn)
 	return true;
 }
 
-/* sees if flag is a valid flag in keywords.h */
-static signed int is_valid_arg (const char *flag)
+/* checks if file type is supported */
+static int check_extension (char *ex)
 {
-	for (int i = 0; flag_map[i].str != NULL; i++)
-		if (strcmp(flag, flag_map[i].str) == 0) return i;
-
-	if (strcmp(flag, "-h") == 0) 
-	{
-		help();
-		return -2;
-	}
-
-	return -1;
-}
-
-/* decides if arguments provided is valid */
-static int check_arg (char *arg)
-{
-	char *ex = malloc(sizeof(arg));
-
-	if (is_file(arg) != true)
-	{
-		printe("No such file or directory");
-		return 1;
-	}
-
-	if (ex == NULL)
-	{
-		printe("malloc (ex) check_arg");
-		return 1;
-	}
-
-	if (arg == NULL)
-	{
-		free(ex);
-		printe("No arg supplied");
-		return 1;
-	}
-
-	ex = get_extension(arg);
-
-	if (ex == NULL)
-	{
-		printe("Invalid file type (0)");
-		return 1;
-	}
-
-	/* is the file extension supported? */
-	for (int i = 0; valid_ex[i] != NULL; i++)
-	{
-		if (strcmp(valid_ex[i], ex) == 0)
-		{
-			free(ex);
+	for (size_t i = 0; valid_ex[i] != NULL; i++)
+		if (strncmp(valid_ex[i], ex, strlen(valid_ex[i])))
 			return 0;
-		}
-	}
 
-	printe("Invalid file type (1)");
-	free(ex);
 	return 1;
 }
 
-static int global_setup (int argc, char *argv[])
+/* sets the file name */ 
+static void set_file (char *name)
 {
-	signed int valid_flag = -1;
-	char *flag = malloc(sizeof(argv[1]));
-	char *arg = malloc(sizeof(argv[2]));
+	char *ex = malloc(sizeof(name));
 
-	/* sets up curses if no args */
-	if (argc < 2) return (curses_setup() == 0) ? 0 : 1;
-
-	flag = strndup(argv[1], strlen(argv[1]));
-	arg = strndup(argv[2], strlen(argv[2]));
-
-	if (check_arg(arg) != 0) return 1;
-	
-	/* sees if flag is valid -2 is the help function */
-	if ((valid_flag = is_valid_arg(flag)) == -1)
+	if (ex == NULL)
 	{
-		printe("Invalid arg\nsee -h");
-		free(flag);
-		free(arg);
-		return 1;
-	} else if (valid_flag == -2) return 0;
+		printe("malloc (ex) set_file");
+		return;
+	}
 
-	/* execute command */
-	flag_map[valid_flag].fn(arg);
-	free(arg);
-	free(flag);
+	if (is_file(name) == false)
+	{
+		printe("no such file or directory");
+		return;
+	}
+
+	if (check_extension(ex) != 0)
+	{
+		printe("invalid file type");
+		return;
+	}
+
+	if (name == NULL)
+	{
+		printe("No file supplied!\n");
+		return;
+	}
+
+	if (sizeof(name) > sizeof(file_name))
+		file_name = realloc(file_name, sizeof(name));
+
+	file_name = strndup(name, strlen(name));
+	free(ex);
+}
+
+/* scans command line args and sets bools */
+static int scan_args (char *argv[])
+{
+	for (size_t i = 0; argv[i] != NULL; i++)
+		if (argv[i][0] == '-' && argv[i][2] == (char) 0)
+			switch (argv[i][1])
+			{
+				case 'p':
+					playback_f = true;
+					set_file(argv[i+1]);
+					break;
+				case 'h':
+					help_f = true;
+					break;
+				case 'b':
+					background_f = true;
+					break;
+				default:
+					fprintf(stderr, "ERROR: No such arg %s\n", argv[i]);
+					return 1;
+					break;
+			}
+		else if (argv[i][0] == '-' && argv[i][2] != (char) 0)
+		{
+			fprintf(stderr, "ERROR: No such arg %s\n", argv[i]);
+			return 1;
+		}
+
+	return 0;
+}
+
+static int setup (int argc, char *argv[])
+{
+	file_name = malloc(1024);
+
+	if (file_name == NULL)
+	{
+		printe("malloc (file_name) setup");
+		return 1;
+	}
+
+	if (argc < 2) return curses_setup();
+
+	if (scan_args(argv) != 0) return 1;
+
+	if (help_f == true) return help();
+
+	if (playback_f == true)
+		playback_entry(file_name);
+
+	free(file_name);
 	return 0;
 }
 
 int main (int argc, char *argv[])
 {
-	return (global_setup(argc, argv) == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+	return (setup(argc, argv) == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

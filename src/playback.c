@@ -27,8 +27,10 @@ static double calc_time (char *fn)
 		sample_size = SDL_AUDIO_BITSIZE(spec.format) / 8;
 		sample_count = audio_len / sample_size;
 
-		if (spec.channels) sample_len = sample_count / spec.channels;
-		else sample_len = sample_count;
+		if (spec.channels)
+			sample_len = sample_count / spec.channels;
+		else
+			sample_len = sample_count;
 
 		time = (double) sample_len / (double) spec.freq;
 	}
@@ -64,6 +66,16 @@ static void pause_loop (void)
 	unpauseAudio();
 }
 
+static void count (double min, int sec, double min_time)
+{
+	if (sec < 61) 
+		mvprintw(1, 0, "%d Seconds Elapsed \\ %.2f Total Time", sec, min_time);
+	else if (sec > 61) 
+		mvprintw(1, 0, "%d.%d Minutes Elapsed \\ %.2f Total Time", min, sec, min_time);
+
+	refresh();
+}
+
 /* the interface for controlling via terminal */
 static void controls (char *fn)
 {
@@ -94,19 +106,15 @@ static void controls (char *fn)
 	for (int k = 0; i < raw_time; i++, k++)
 	{
 		if ((ch = getch()) == 'q') break;
-		else if ((fd = keycheck(ch)) != -1) keys[fd].fn();
+		else if ((fd = keycheck(ch)) != -1)
+			keys[fd].fn();
 
 		/* 1000 is 1 second */
 		SDL_Delay(1000);
 
 		if (ch == 'p') pause_loop();
 
-		if (k < 61) 
-			mvprintw(1, 0, "%d Seconds Elapsed \\ %.2f Total Time", k, min_time);
-		else if (k > 61) 
-			mvprintw(1, 0, "%.0f.%d Minutes Elapsed \\ %.2f Total Time", convert_to_min(i), k, min_time);
-
-		refresh();
+		count(i, k, min_time);
 	}
 
 	echo();

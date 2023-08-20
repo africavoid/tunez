@@ -3,12 +3,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <curses.h>
 
 /* prints formatted error msgs */
 void printe(const char *str);
-
-/* the help function */
-void help (void);
 
 #include "error.c"
 #endif

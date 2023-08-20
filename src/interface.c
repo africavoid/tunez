@@ -3,10 +3,17 @@
 #include <dirent.h>
 
 #include "interface.h"
-#include "error.h"
 #include "playback.h"
 
 static void curses_clean(SCR *scr);
+
+void printce (SCR *scr, const char *errstr)
+{
+	mvwprintw(scr->win, scr->max_y - 2, 1, "%s", errstr);
+	wrefresh(scr->win);
+	curs_set(0);	
+	echo();
+}
 
 static int curses_scan_dir (SCR *scr, const char *dn)
 {
@@ -30,13 +37,7 @@ static int curses_scan_dir (SCR *scr, const char *dn)
 	return 0;
 }
 
-void printce (SCR *scr, const char *errstr)
-{
-	mvwprintw(scr->win, scr->max_y - 2, 1, "%s", errstr);
-	wrefresh(scr->win);
-	curs_set(0);	
-	echo();
-} 
+ 
 
 /*
 	creates the menu on the screen of all
