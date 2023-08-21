@@ -5,6 +5,8 @@ LIBS=-L/usr/local/lib
 CFLAGS=-Wno-implicit-function-declaration
 
 all:
-	$(CC) src/main.c src/audio.c $(INCS) $(LIBS) $(CFLAGS) -lSDL2 -lncurses -o $(BIN) -g
+	mkdir -p bin/
+	$(CC) src/main.c src/audio.c $(INCS) $(LIBS) $(CFLAGS) -lSDL2 -lncurses -lmenu -lm -o $(BIN) -g
+	mv $(BIN) bin/
 run:
-	./$(BIN)
+	./bin/$(BIN)
