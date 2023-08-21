@@ -39,11 +39,35 @@ static double calc_time (char *fn)
 	return time;
 }
 
-/* converts seconds to minutes
- * only if seconds is longer than 60 */
-static double convert_to_min (double secs)
+/* gets total seconds */
+static int get_secs (double total_secs) 
 {
-	return (secs < 60) ? secs : secs / 60;
+	double total_raw_mins;
+	int total_whole_mins;
+
+	double remaining_raw_secs;
+	int remaining_secs;
+
+	total_raw_mins = total_secs / 60;
+	total_whole_mins = (int) total_raw_mins;
+
+	remaining_raw_secs = (double) total_raw_mins - (double) total_whole_mins;
+	remaining_secs = remaining_raw_secs * 60;
+
+	return remaining_secs;
+
+}
+
+/* gets total mins as whole number */
+static int get_mins (double total_secs)
+{
+	double total_raw_mins;
+	int total_whole_mins;
+
+	total_raw_mins = total_secs / 60;
+	total_whole_mins = (int) total_raw_mins;
+
+	return total_whole_mins;
 }
 
 /* checks if key pressed is a valid key
@@ -67,13 +91,12 @@ static void pause_loop (void)
 	unpauseAudio();
 }
 
-static void count (double min, int sec, double min_time, double max_time)
+static void count (int sec, double raw_time)
 {
-	if (sec < 61) 
-		mvprintw(1, 0, "%d Seconds Elapsed \\ %.2f Total Time", sec, min_time);
-	else if (sec > 61) 
-		mvprintw(1, 0, "%d.%d Minutes Elapsed \\ %.2f Total Time", min, sec, max_time);
-
+	if (sec <= 60)
+		mvprintw(1, 0, "%d Seconds Elapsed / %d.%d Minutes", sec, get_mins(raw_time), get_secs(raw_time));
+	else if (sec >= 60)
+		mvprintw(1, 0, "%d.%d Minutes Elapsed / %d.%d Minutes", get_mins(sec), get_secs(sec), get_mins(raw_time), get_secs(raw_time));
 	refresh();
 }
 
@@ -92,7 +115,7 @@ static void controls (char *fn)
 
 	/* get length of file in seconds */
 	raw_time = calc_time(fn);
-	min_time = convert_to_min(raw_time);
+	min_time = get_mins(raw_time);
 	
 	/* general setup for curses */
 	noecho();
@@ -110,12 +133,12 @@ static void controls (char *fn)
 		else if ((fd = keycheck(ch)) != -1)
 			keys[fd].fn();
 
-		/* 1000 is 1 second */
+		/* 1000 = second */
 		SDL_Delay(1000);
 
 		if (ch == 'p') pause_loop();
 
-		count(i, k, min_time, raw_time);
+		count(i, raw_time);
 	}
 
 	echo();
