@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "interface.h"
+#include "mp3.h"
 #include "parse.h"
 #include "playback.h"
 #include "error.h"
@@ -14,6 +15,8 @@
 bool background_f = false;
 bool help_f = false;
 bool playback_f = false;
+bool is_wav_f = false;
+bool is_mp3_f = false;
 
 /* used to represent no flags 
  * if args are supplied but no flags
@@ -56,7 +59,11 @@ static int check_extension (char *ex)
 {
 	for (size_t i = 0; valid_ex[i] != NULL; i++)
 		if (strncmp(valid_ex[i], ex, strlen(valid_ex[i])) == 0)
+		{
+			if (strncmp(valid_ex[i], ".mp3", strlen(valid_ex[i])) == 0) is_mp3_f = true;
+			else if (strncmp(valid_ex[i], ".wav", strlen(valid_ex[i])) == 0) is_wav_f = true;
 			return 0;
+		}
 
 	return 1;
 }
@@ -151,6 +158,27 @@ static int scan_args (char *argv[])
 	return 0;
 }
 
+static int flag_parser (void)
+{
+	if (NULL_f == true)
+	{
+		printe("no flags supplied, see -h");
+		return 1;
+	}
+
+	if (help_f == true) return help();
+
+	if (playback_f != true) return 1;
+
+	if (is_wav_f == true)
+		playback_entry(file_name);
+	else if (is_mp3_f == true)
+		mp3_playback_entry(file_name);
+
+	free(file_name);
+	return 0;
+}
+
 static int setup (int argc, char *argv[])
 {
 	file_name = malloc(1024);
@@ -165,19 +193,7 @@ static int setup (int argc, char *argv[])
 
 	if (scan_args(argv) != 0) return 1;
 
-	if (NULL_f == true)
-	{
-		printe("no flags supplied see -h");
-		return 1;
-	}
-
-	if (help_f == true) return help();
-
-	if (playback_f == true)
-		playback_entry(file_name);
-
-	free(file_name);
-	return 0;
+	return flag_parser();
 }
 
 int main (int argc, char *argv[])
