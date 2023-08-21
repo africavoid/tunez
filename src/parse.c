@@ -3,6 +3,8 @@
 #include "parse.h"
 #include "error.h"
 
+/* This file contains functions used for parsing strings */
+
 // TODO get this to work
 // as get_first_word get_second_word is
 // horribly ineffcient
@@ -138,23 +140,27 @@ char *mono_str (char *strarr[])
 	return mstr;
 }
 
-char *get_extension (char *str)
+/* gets file type from string */
+static char *get_file_type (char *str)
 {
 	char *ex = malloc(sizeof(str));
-	size_t len = strlen(str), dot_index = 0, j;
+	size_t len = strlen(str), dot_index = 0;
 
-	for (; str[len] != '.'; len--)
-		dot_index = len;
-
-	if (dot_index == 0) return NULL;
-
-	j = dot_index;
-
-	do
+	if (ex == NULL) 
 	{
+		printe("malloc (ex) get_file_type");
+		return NULL;
+	}
+
+	for (int i = 0; str[i] != (char) 0; i++)
+		if (str[i] == '.')
+		{
+			dot_index = i;
+			break;
+		}
+
+	for (size_t j = dot_index; str[j] != (char) 0; j++)
 		strncat(ex, &str[j], 1);
-		j++;
-	} while (str[j] != (char) 0);
 
 	return ex;
 }

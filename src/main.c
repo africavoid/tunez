@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "keywords.h"
 #include "interface.h"
 #include "parse.h"
 #include "playback.h"
@@ -29,31 +28,6 @@ const char *valid_ex[] = {
 	".wav",
 	".mp3",
 };
-
-/* gets file type from string */
-static char *get_file_type (char *str)
-{
-	char *ex = malloc(sizeof(str));
-	size_t len = strlen(str), dot_index = 0;
-
-	if (ex == NULL) 
-	{
-		printe("malloc (ex) get_file_type");
-		return NULL;
-	}
-
-	for (int i = 0; str[i] != (char) 0; i++)
-		if (str[i] == '.')
-		{
-			dot_index = i;
-			break;
-		}
-
-	for (size_t j = dot_index; str[j] != (char) 0; j++)
-		strncat(ex, &str[j], 1);
-
-	return ex;
-}
 
 static int help (void)
 {
@@ -94,7 +68,7 @@ static int set_file (char *name)
 
 	if (name == NULL)
 	{
-		printe("No file supplied!\n");
+		printe("No file supplied!");
 		return 1;
 	}
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <SDL2/SDL.h>
 #include <curses.h>
+#include <math.h>
 
 #include "playback.h"
 #include "parse.h"
@@ -42,7 +43,7 @@ static double calc_time (char *fn)
  * only if seconds is longer than 60 */
 static double convert_to_min (double secs)
 {
-	return (secs > 60.00) ? (secs / 60.00) : secs;
+	return (secs < 60) ? secs : secs / 60;
 }
 
 /* checks if key pressed is a valid key
@@ -66,12 +67,12 @@ static void pause_loop (void)
 	unpauseAudio();
 }
 
-static void count (double min, int sec, double min_time)
+static void count (double min, int sec, double min_time, double max_time)
 {
 	if (sec < 61) 
 		mvprintw(1, 0, "%d Seconds Elapsed \\ %.2f Total Time", sec, min_time);
 	else if (sec > 61) 
-		mvprintw(1, 0, "%d.%d Minutes Elapsed \\ %.2f Total Time", min, sec, min_time);
+		mvprintw(1, 0, "%d.%d Minutes Elapsed \\ %.2f Total Time", min, sec, max_time);
 
 	refresh();
 }
@@ -114,7 +115,7 @@ static void controls (char *fn)
 
 		if (ch == 'p') pause_loop();
 
-		count(i, k, min_time);
+		count(i, k, min_time, raw_time);
 	}
 
 	echo();
