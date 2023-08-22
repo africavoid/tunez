@@ -3,13 +3,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "interface.h"
-#include "mp3.h"
+#include "controller.h"
 #include "parse.h"
-#include "playback.h"
 #include "error.h"
-#include "audio.h"
-#include "cmds.h"
 
 /* flag variables */
 bool background_f = false;
@@ -171,7 +167,7 @@ static int flag_parser (void)
 	if (playback_f != true) return 1;
 
 	if (is_wav_f == true)
-		playback_entry(file_name);
+		wav_playback_entry(file_name);
 	else if (is_mp3_f == true)
 		mp3_playback_entry(file_name);
 
@@ -181,7 +177,7 @@ static int flag_parser (void)
 
 static int setup (int argc, char *argv[])
 {
-	file_name = malloc(1024);
+	file_name = malloc(sizeof(*argv));
 
 	if (file_name == NULL)
 	{
@@ -189,7 +185,7 @@ static int setup (int argc, char *argv[])
 		return 1;
 	}
 	
-	if (argc < 2) return curses_setup();
+	if (argc < 2) return help();
 
 	if (scan_args(argv) != 0) return 1;
 
