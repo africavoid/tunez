@@ -1,6 +1,8 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <curses.h>
 
 #include "controller.h"
@@ -8,22 +10,30 @@
 
 static double wav_calc_time (const char *fn);
 
+/* type of file, 0 is wav, 1 is mp3 */
+uint8_t type = 0;
+
 /* curses screen */
 typedef struct {
 	WINDOW *win;
 	size_t max_y, max_x;
 }SCR;
 
+typedef struct {
+	Mix_Music *music;
+}MP3;
+
 /* audio data */
 typedef struct {
-	Uint32 wav_len;
-	Uint8 *wav_buf;
-	SDL_AudioSpec spec;
+	uint32_t wav_len;
+	uint8_t *wav_buf;
+	SDL_AudioSpec wav_spec;
 	SDL_AudioDeviceID device_id;
 }AUD;
 
 SCR *scr;
 AUD *aud;
+MP3 *mp3;
 
 /* gets total seconds */
 static int get_secs (double total_secs) 
@@ -58,10 +68,15 @@ static int get_mins (double total_secs)
 static void scr_count (int sec, double raw_time)
 {
 	if (sec <= 60)
-		mvprintw(1, 0, "%d Seconds Elapsed / %d.%d Minutes", sec, get_mins(raw_time), get_secs(raw_time));
+		mvwprintw(scr->win, 1, 0, SECSTR, sec, get_mins(raw_time), get_secs(raw_time));
 	else if (sec >= 60)
-		mvprintw(1, 0, "%d.%d Minutes Elapsed / %d.%d Minutes", get_mins(sec), get_secs(sec), get_mins(raw_time), get_secs(raw_time));
-	refresh();
+	{
+		for (int i = 0; i < strlen(SECSTR); i++)
+			mvwprintw(scr->win, 1, 0, " ");
+		mvwprintw(scr->win, 1, 0, MINSTR, get_mins(sec), get_secs(sec), get_mins(raw_time), get_secs(raw_time));
+	}
+
+	wrefresh(scr->win);
 }
 
 static int ctrl_init_curses (const char *fn)
@@ -69,7 +84,12 @@ static int ctrl_init_curses (const char *fn)
 	if (initscr() == NULL) return 1;
 
 	scr = malloc(sizeof(*scr));
-	if (scr == NULL) return 1;
+
+	if (scr == NULL)
+	{
+		printe("malloc (scr) ctrl_init_curses");
+		return 1;
+	}
 
 	/* create a basic curses window */
 	getmaxyx(stdscr, scr->max_y, scr->max_x);
@@ -87,6 +107,29 @@ static int ctrl_init_curses (const char *fn)
 	return 0;
 }
 
+/* inits the cmd line */
+void cmd_line (void)
+{
+	char *cmd = malloc(1024);
+	pause();
+	nodelay(scr->win, false);
+
+	mvwprintw(scr->win, scr->max_y - 1, 0, ":");
+	wrefresh(scr->win);
+
+	echo();
+	curs_set(1);
+	wgetnstr(scr->win, cmd, 1024);
+
+	nodelay(scr->win, true);
+	noecho();
+	curs_set(0);
+
+	unpause();
+	free(cmd);
+}
+
+/* cleanup function for curses */
 static void ctrl_free_curses (void)
 {
 	free(scr);
@@ -95,12 +138,28 @@ static void ctrl_free_curses (void)
 
 void unpause (void)
 {
-	SDL_PauseAudioDevice(aud->device_id, 0);
+	if (type == 0)
+		SDL_PauseAudioDevice(aud->device_id, 0);
+	else if (type == 1)
+		Mix_ResumeMusic();
 }
 
 void pause (void)
 {
-	SDL_PauseAudioDevice(aud->device_id, 1);
+	int ch;
+
+	if (type == 0)
+		SDL_PauseAudioDevice(aud->device_id, 1);
+	else if (type == 1)
+		Mix_PauseMusic();
+
+	nodelay(scr->win, false);
+
+	while ((ch = wgetch(scr->win)) != 'u')
+		;
+
+	nodelay(scr->win, true);
+	unpause();
 }
 
 /* will see if ch is the same as a valid key
@@ -112,10 +171,9 @@ static void parse_keys (int ch)
 }
 
 /* the main loop for controlling program */
-void control_loop (const char *fn) 
+void control_loop (const char *fn, double time) 
 {
 	int ch;
-	double time = wav_calc_time(fn);
 
 	if (ctrl_init_curses(fn) != 0)
 	{
@@ -138,13 +196,13 @@ void control_loop (const char *fn)
 /* calculates length of wav file */
 static double wav_calc_time (const char *fn)
 {
-	SDL_AudioSpec spec;
 	double time = 0.0;
 	uint8_t *audio_buf;
 	uint32_t audio_len;
 	uint32_t sample_len = 0;
 	uint32_t sample_size;
 	uint32_t sample_count;
+	SDL_AudioSpec spec;
 
 	/* loads wav file and does a calculation based on the file */
 	if (SDL_LoadWAV(fn, &spec, &audio_buf, &audio_len) != NULL)
@@ -170,10 +228,15 @@ static int wav_init (const char *fn)
 {
 	/* load the file */
 	SDL_Init(SDL_INIT_AUDIO);
-	SDL_LoadWAV(fn, &aud->spec, &aud->wav_buf, &aud->wav_len);
+	if (SDL_LoadWAV(fn, &aud->wav_spec, &aud->wav_buf, &aud->wav_len) == NULL)
+	{
+		printe("cannot load file");
+		fprintf(stderr, "%s\n", SDL_GetError());
+		return 1;
+	}
 
 	/* open audio device */
-	aud->device_id = SDL_OpenAudioDevice(NULL, 0, &aud->spec, NULL, 0);
+	aud->device_id = SDL_OpenAudioDevice(NULL, 0, &aud->wav_spec, NULL, 0);
 	return 0;
 }
 
@@ -209,19 +272,22 @@ void wav_playback_entry (const char *fn)
 	}
 	
 	SDL_PauseAudioDevice(aud->device_id, 0);
-	control_loop(fn);
+	control_loop(fn, wav_calc_time(fn));
 	wav_cleanup();
 }
 
 /* gets ready for playback mp3 file */
 void mp3_playback_entry (const char *fn)
 {
-	aud = malloc(sizeof(*aud));
-	if (aud == NULL)
+	mp3 = malloc(sizeof(*mp3));
+
+	if (mp3 == NULL)
 	{
-		printe("malloc (aud) mp3_playback_entry");
+		printe("malloc (mp3) mp3_playback_entry");
 		return;
 	}
+
+	type = 1;
 
 	/* init SDL for playback */
 	if (SDL_Init(SDL_INIT_AUDIO) < 0)
@@ -238,11 +304,11 @@ void mp3_playback_entry (const char *fn)
 	}
 
 	Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
-	Mix_Music *music = Mix_LoadMUS(fn);
-	Mix_PlayMusic(music, 1);
+	mp3->music = Mix_LoadMUS(fn);
+	Mix_PlayMusic(mp3->music, 1);
 
-	control_loop(fn);
-	Mix_FreeMusic(music);
+	control_loop(fn, Mix_MusicDuration(mp3->music));
+	Mix_FreeMusic(mp3->music);
 	SDL_Quit();
-	free(aud);
+	free(mp3);
 }
