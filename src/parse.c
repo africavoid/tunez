@@ -140,6 +140,7 @@ char *mono_str (char *strarr[])
 	return mstr;
 }
 
+
 /* gets file type from string */
 static char *get_file_type (char *str)
 {

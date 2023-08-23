@@ -15,6 +15,7 @@
 #define MINSTR "%d Mins %d Secs Elapsed / %d Mins %d Secs Total"
 
 void cmd_line(void);
+void quit(void);
 void pause(void);
 void unpause(void);
 void wav_playback_entry (const char *fn);
@@ -30,6 +31,7 @@ struct KEYMAP keymap[] = {
 	{ 'p', pause },
 	{ 'u', unpause },
 	{ ':', cmd_line },
+	{ 'q', quit },
 };
 
 #include "controller.c"

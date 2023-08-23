@@ -8,6 +8,8 @@
 #include "controller.h"
 #include "error.h"
 
+static void wav_cleanup(void);
+static void ctrl_free_curses (void);
 static double wav_calc_time (const char *fn);
 
 /* type of file, 0 is wav, 1 is mp3 */
@@ -34,6 +36,23 @@ typedef struct {
 SCR *scr;
 AUD *aud;
 MP3 *mp3;
+
+void quit (void)
+{
+	ctrl_free_curses();
+	wav_cleanup();
+
+	if (scr != NULL)
+		free(scr);
+
+	if (aud != NULL)
+		free(aud);
+
+	if (mp3 != NULL)
+		free(mp3);
+
+	exit(0);
+}
 
 /* gets total seconds */
 static int get_secs (double total_secs) 
@@ -183,11 +202,11 @@ void control_loop (const char *fn, double time)
 
 	for (size_t i = 0; i < time; i++)
 	{
-		if ((ch = wgetch(scr->win)) == 'q') break;
+		if ((ch = wgetch(scr->win)) == 's') break;
 
 		parse_keys(ch);
-		SDL_Delay(SECOND);
 		scr_count((int) i, time);
+		SDL_Delay(SECOND);
 	}
 
 	ctrl_free_curses();
@@ -252,6 +271,7 @@ static void wav_cleanup (void)
 void wav_playback_entry (const char *fn)
 {
 	aud = malloc(sizeof(*aud));
+
 	if (aud == NULL)
 	{
 		printe("malloc (aud) wav_playback_entry");
@@ -312,3 +332,4 @@ void mp3_playback_entry (const char *fn)
 	SDL_Quit();
 	free(mp3);
 }
+

@@ -3,15 +3,25 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <dirent.h>
 
+#include "playlist.h"
 #include "controller.h"
 #include "parse.h"
 #include "error.h"
+
+/* supported file types */
+const char *valid_ex[] = {
+	".wav",
+	".mp3",
+};
 
 /* flag variables */
 bool background_f = false;
 bool help_f = false;
 bool playback_f = false;
+bool playlist_f = false;
+bool shuffle_f = false;
 bool is_wav_f = false;
 bool is_mp3_f = false;
 
@@ -22,33 +32,17 @@ bool NULL_f = true;
 
 /* file that will be played */
 char *file_name;
-
-/* supported file types */
-const char *valid_ex[] = {
-	".wav",
-	".mp3",
-};
+char *dir_name;
 
 static int help (void)
 {
 	fprintf(stdout, "USAGE:\n");
 	fprintf(stdout, "-p [file] to play a file\n");
+	fprintf(stdout, "-P [directory] to play through a dir/playlist\n");
 	fprintf(stdout, "-b to run in background\n");
 	fprintf(stdout, "Supported file types:\n");
 	fprintf(stdout, "\twav\n\tmp3\n");
 	return 0;
-}
-
-/* checks if file exists */
-static bool is_file (const char *fn)
-{
-	FILE *fp;
-	
-	if ((fp = fopen(fn, "r")) == NULL)
-		return false;
-
-	fclose(fp);
-	return true;
 }
 
 /* checks if file type is supported */
@@ -63,6 +57,47 @@ static int check_extension (char *ex)
 		}
 
 	return 1;
+}
+
+
+/* checks if file exists */
+static bool is_file (const char *fn)
+{
+	FILE *fp;
+	
+	if ((fp = fopen(fn, "r")) == NULL)
+		return false;
+
+	fclose(fp);
+	return true;
+}
+
+static int set_dir (char *name)
+{
+	DIR *dp;
+	struct dirent *entry;
+
+	if (name == NULL)
+	{
+		printe("no directory supplied");
+		return 1;
+	}
+
+	dp = opendir(name);
+
+	if (dp == NULL)
+	{
+		printe("no such directory");
+		return 1;
+	}
+
+	closedir(dp);
+
+	if (sizeof(name) > sizeof(dir_name))
+		dir_name = realloc(dir_name, sizeof(name));
+
+	dir_name = strndup(name, strlen(name));
+	return 0;
 }
 
 /* sets the file name */ 
@@ -134,6 +169,14 @@ static int scan_args (char *argv[])
 					background_f = true;
 					NULL_f = false;
 					break;
+				case 'P':
+					playlist_f = true;
+					file_index = i+1;
+					NULL_f = false;
+					break;
+				case 'S':
+					shuffle_f = true;
+					break;
 				default:
 					fprintf(stderr, "ERROR: No such arg %s\n", argv[i]);
 					return 1;
@@ -144,8 +187,16 @@ static int scan_args (char *argv[])
 			return 1;
 		}
 
-	/* setting the file name */
-	if (set_file(argv[file_index]) != 0) 
+	if (playlist_f == true)
+	{
+		if (set_dir(argv[file_index]) != 0)
+		{
+			NULL_f = true;
+			return 0;
+		}
+	}
+
+	else if (set_file(argv[file_index]) != 0) 
 	{
 		playback_f = false;
 		NULL_f = true;
@@ -165,7 +216,9 @@ static int flag_parser (void)
 
 	if (help_f == true) return help();
 
-	if (playback_f != true) return 1;
+	if (playlist_f == true)
+		playlist_entry(dir_name, shuffle_f);
+	else if (playback_f != true) return 1;
 
 	if (is_wav_f == true)
 		wav_playback_entry(file_name);
@@ -173,12 +226,14 @@ static int flag_parser (void)
 		mp3_playback_entry(file_name);
 
 	free(file_name);
+	free(dir_name);
 	return 0;
 }
 
 static int setup (int argc, char *argv[])
 {
 	file_name = malloc(sizeof(*argv));
+	dir_name = malloc(sizeof(*argv));
 
 	if (file_name == NULL)
 	{
