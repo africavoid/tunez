@@ -84,6 +84,7 @@ static int get_mins (double total_secs)
 	return total_whole_mins;
 }
 
+/* the time counter on the screen */
 static void scr_count (int sec, double raw_time)
 {
 	if (sec <= 60)
@@ -155,6 +156,7 @@ static void ctrl_free_curses (void)
 	endwin();
 }
 
+/* unpauses audio depending on type */
 void unpause (void)
 {
 	if (type == 0)
@@ -163,6 +165,7 @@ void unpause (void)
 		Mix_ResumeMusic();
 }
 
+/* pauses audio depending on flag */
 void pause (void)
 {
 	int ch;

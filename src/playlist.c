@@ -31,6 +31,8 @@ static size_t playlist_check_extension (char *ex)
 	return 0;
 }
 
+/* gets all the valid .mp3 and .wav files
+ * and assigns them in dir struct */
 static int get_valid_files (const char *dn)
 {
 	DIR *dp;
@@ -44,21 +46,26 @@ static int get_valid_files (const char *dn)
 
 	if (dp == NULL) return 1;
 
+	/* the max amount of valid files to play */
 	dir->fn_max = 0;
 
 	for (size_t i = 0; (entry = readdir(dp)) != NULL;)
 	{
+		/* getting file extension */
 		ex = strndup(get_file_type(entry->d_name), strlen(entry->d_name));
 	
 		if (playlist_check_extension(ex) != 0)
 		{
+			/* assiging file path and file name */
 			strncat(tmp, path, strlen(path));
 			strncat(tmp, entry->d_name, strlen(entry->d_name));
 
+			/* placing file path & name in dir struct for playback */
 			dir->fn[i] = strndup(tmp, strlen(tmp));
 			dir->ft[i] = playlist_check_extension(ex);
 			dir->fn_max++;
 
+			/* reseting tmp string */
 			memset(tmp, 0, strlen(tmp));
 			i++;
 		}
@@ -70,10 +77,11 @@ static int get_valid_files (const char *dn)
 	return 0;
 }
 
+/* calls the corresponding playback function
+ * to the file type */
 void playlist_start (bool shuffle)
 {
 	for (size_t i = 0; i < dir->fn_max; i++)
-	{
 		switch (dir->ft[i])
 		{
 			case 1:
@@ -85,9 +93,10 @@ void playlist_start (bool shuffle)
 			default:
 				break;
 		}
-	}
 }
 
+/* the entry point for playlist functionality
+ * its sets everything up */
 void playlist_entry (const char *dn, bool shuffle)
 {
 	dir = malloc(sizeof(*dir));

@@ -34,6 +34,7 @@ bool NULL_f = true;
 char *file_name;
 char *dir_name;
 
+/* simple help function */
 static int help (void)
 {
 	fprintf(stdout, "USAGE:\n");
@@ -72,16 +73,14 @@ static bool is_file (const char *fn)
 	return true;
 }
 
+/* sets the directory based on cmd line args */
 static int set_dir (char *name)
 {
 	DIR *dp;
 	struct dirent *entry;
 
 	if (name == NULL)
-	{
-		printe("no directory supplied");
-		return 1;
-	}
+		name = strndup(".", 1);
 
 	dp = opendir(name);
 
