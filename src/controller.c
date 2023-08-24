@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <curses.h>
 
+#include "interface.h"
 #include "controller.h"
 #include "error.h"
 
@@ -14,12 +15,6 @@ static double wav_calc_time (const char *fn);
 
 /* type of file, 0 is wav, 1 is mp3 */
 uint8_t type = 0;
-
-/* curses screen */
-typedef struct {
-	WINDOW *win;
-	size_t max_y, max_x;
-}SCR;
 
 typedef struct {
 	Mix_Music *music;
@@ -33,17 +28,14 @@ typedef struct {
 	SDL_AudioDeviceID device_id;
 }AUD;
 
-SCR *scr;
 AUD *aud;
 MP3 *mp3;
 
 void quit (void)
 {
 	ctrl_free_curses();
-	wav_cleanup();
 
-	if (scr != NULL)
-		free(scr);
+	if (type == 0) wav_cleanup();
 
 	if (aud != NULL)
 		free(aud);
@@ -55,7 +47,7 @@ void quit (void)
 }
 
 /* gets total seconds */
-static int get_secs (double total_secs) 
+int get_secs (double total_secs) 
 {
 	double total_raw_mins;
 	int total_whole_mins;
@@ -73,7 +65,7 @@ static int get_secs (double total_secs)
 }
 
 /* gets total mins as whole number */
-static int get_mins (double total_secs)
+int get_mins (double total_secs)
 {
 	double total_raw_mins;
 	int total_whole_mins;
@@ -82,78 +74,6 @@ static int get_mins (double total_secs)
 	total_whole_mins = (int) total_raw_mins;
 
 	return total_whole_mins;
-}
-
-/* the time counter on the screen */
-static void scr_count (int sec, double raw_time)
-{
-	if (sec <= 60)
-		mvwprintw(scr->win, 1, 0, SECSTR, sec, get_mins(raw_time), get_secs(raw_time));
-	else if (sec >= 60)
-	{
-		for (int i = 0; i < strlen(SECSTR); i++)
-			mvwprintw(scr->win, 1, 0, " ");
-		mvwprintw(scr->win, 1, 0, MINSTR, get_mins(sec), get_secs(sec), get_mins(raw_time), get_secs(raw_time));
-	}
-
-	wrefresh(scr->win);
-}
-
-static int ctrl_init_curses (const char *fn)
-{
-	if (initscr() == NULL) return 1;
-
-	scr = malloc(sizeof(*scr));
-
-	if (scr == NULL)
-	{
-		printe("malloc (scr) ctrl_init_curses");
-		return 1;
-	}
-
-	/* create a basic curses window */
-	getmaxyx(stdscr, scr->max_y, scr->max_x);
-	scr->win = newwin(scr->max_y, scr->max_x, 0, 0);
-	refresh();
-
-	/* some basic settings */ 
-	noecho();
-	curs_set(0);
-	nodelay(scr->win, true);
-
-	/* some decor */
-	mvwprintw(scr->win, 0, 0, "Playing %s", fn);
-	wrefresh(scr->win);
-	return 0;
-}
-
-/* inits the cmd line */
-void cmd_line (void)
-{
-	char *cmd = malloc(1024);
-	pause();
-	nodelay(scr->win, false);
-
-	mvwprintw(scr->win, scr->max_y - 1, 0, ":");
-	wrefresh(scr->win);
-
-	echo();
-	curs_set(1);
-	wgetnstr(scr->win, cmd, 1024);
-
-	nodelay(scr->win, true);
-	noecho();
-	curs_set(0);
-
-	unpause();
-	free(cmd);
-}
-
-/* cleanup function for curses */
-static void ctrl_free_curses (void)
-{
-	free(scr);
-	endwin();
 }
 
 /* unpauses audio depending on type */
@@ -175,44 +95,16 @@ void pause (void)
 	else if (type == 1)
 		Mix_PauseMusic();
 
-	nodelay(scr->win, false);
+	pause_control();
 
-	while ((ch = wgetch(scr->win)) != 'u')
-		;
-
-	nodelay(scr->win, true);
+	
+	play_settings();
 	unpause();
 }
 
-/* will see if ch is the same as a valid key
- * if it is it will run the function corresponding to key */
-static void parse_keys (int ch)
+void audio_position (size_t pos)
 {
-	for (size_t i = 0; keymap[i].ch != (char) 0; i++)
-		if (keymap[i].ch == ch) keymap[i].fn();
-}
-
-/* the main loop for controlling program */
-void control_loop (const char *fn, double time) 
-{
-	int ch;
-
-	if (ctrl_init_curses(fn) != 0)
-	{
-		printe("failed to init curses");
-		return;
-	}
-
-	for (size_t i = 0; i < time; i++)
-	{
-		if ((ch = wgetch(scr->win)) == 's') break;
-
-		parse_keys(ch);
-		scr_count((int) i, time);
-		SDL_Delay(SECOND);
-	}
-
-	ctrl_free_curses();
+	Mix_SetMusicPosition(pos);
 }
 
 /* calculates length of wav file */
@@ -250,6 +142,7 @@ static int wav_init (const char *fn)
 {
 	/* load the file */
 	SDL_Init(SDL_INIT_AUDIO);
+
 	if (SDL_LoadWAV(fn, &aud->wav_spec, &aud->wav_buf, &aud->wav_len) == NULL)
 	{
 		printe("cannot load file");
@@ -262,6 +155,7 @@ static int wav_init (const char *fn)
 	return 0;
 }
 
+/* cleanup function for wav files */
 static void wav_cleanup (void)
 {
 	SDL_CloseAudioDevice(aud->device_id);
@@ -274,6 +168,8 @@ static void wav_cleanup (void)
 void wav_playback_entry (const char *fn)
 {
 	aud = malloc(sizeof(*aud));
+
+	type = 0;
 
 	if (aud == NULL)
 	{
@@ -335,4 +231,3 @@ void mp3_playback_entry (const char *fn)
 	SDL_Quit();
 	free(mp3);
 }
-

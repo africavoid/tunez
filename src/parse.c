@@ -11,7 +11,7 @@
 char *get_word (const char *str, size_t index)
 {
 	size_t len = strlen(str);
-	char *word = malloc(sizeof(str));
+	char *word = (char*)malloc(sizeof(str));
 
 	if (word == NULL)
 	{
@@ -31,13 +31,14 @@ char *get_word (const char *str, size_t index)
 				strncat(word, &str[i], 1);
 		}else i++;
 	}
-
+	
+	free(word);
 	return word;
 }
 
 char *get_first_word (const char *str)
 {
-	char *nstr = malloc(1024);
+	char *nstr = (char*)malloc(sizeof(str));
 	size_t len = strlen(str);
 
 	if (len == 0) return NULL;
@@ -48,12 +49,13 @@ char *get_first_word (const char *str)
 		strncat(nstr, &str[i], 1);
 	}
 
+	free(nstr);
 	return nstr;
 }
 
 char *get_second_word (const char *str)
 {
-	char *nstr = malloc(1024);
+	char *nstr = (char*)malloc(sizeof(str));
 	size_t len = strlen(str);
 	size_t i = 0;
 	bool is_space = false;
@@ -79,12 +81,13 @@ char *get_second_word (const char *str)
 		strncat(nstr, &str[i], 1);
 	}
 
+	free(nstr);
 	return nstr;
 }
 
 char *get_third_word (const char *str)
 {
-	char *nstr = malloc(1024);
+	char *nstr = (char*)malloc(1024);
 	size_t len = strlen(str);
 	size_t i = 0;
 	bool is_space = false;
@@ -123,13 +126,14 @@ char *get_third_word (const char *str)
 		strncat(nstr, &str[i], 1);
 	}
 
+	free(nstr);
 	return nstr;
 }
 
 
 char *mono_str (char *strarr[])
 {
-	char *mstr = malloc(sizeof(*strarr));
+	char *mstr = (char*)malloc(sizeof(*strarr));
 
 	for (size_t i = 0; strarr[i] != NULL; i++)
 	{
@@ -137,6 +141,7 @@ char *mono_str (char *strarr[])
 		strncat(mstr, " ", strlen(strarr[i]));
 	}
 
+	free(mstr);
 	return mstr;
 }
 
@@ -144,7 +149,7 @@ char *mono_str (char *strarr[])
 /* gets file type from string */
 static char *get_file_type (char *str)
 {
-	char *ex = malloc(sizeof(str));
+	char *ex = (char*)malloc(sizeof(str));
 	size_t len = strlen(str), dot_index = 0;
 
 	if (ex == NULL) 
@@ -163,5 +168,6 @@ static char *get_file_type (char *str)
 	for (size_t j = dot_index; str[j] != (char) 0; j++)
 		strncat(ex, &str[j], 1);
 
+	free(ex);
 	return ex;
 }

@@ -37,13 +37,15 @@ static int get_valid_files (const char *dn)
 {
 	DIR *dp;
 	struct dirent *entry;
-	char *ex = malloc(sizeof(dn));
-	char *tmp = malloc(sizeof(dn));
+	char *ex = (char*)malloc(sizeof(dn));
+	char *tmp = (char*)malloc(sizeof(dn));
 
+	/* full path to the file */
 	path = strndup(dn, strlen(dn));
 
 	dp = opendir(dn);
-
+	
+	/* fails if directory does not exist */
 	if (dp == NULL) return 1;
 
 	/* the max amount of valid files to play */
@@ -100,7 +102,7 @@ void playlist_start (bool shuffle)
 void playlist_entry (const char *dn, bool shuffle)
 {
 	dir = malloc(sizeof(*dir));
-	path = malloc(sizeof(dn));
+	path = (char*)malloc(sizeof(dn));
 
 	if (dir == NULL)
 	{

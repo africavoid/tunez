@@ -14,25 +14,15 @@
 #define SECSTR "%d Seconds Elapsed / %d Mins %d Secs Total"
 #define MINSTR "%d Mins %d Secs Elapsed / %d Mins %d Secs Total"
 
-void cmd_line(void);
+int get_secs (double total_secs);
+int get_mins (double total_secs);
+void audio_position(size_t pos);
 void quit(void);
 void pause(void);
 void unpause(void);
 void wav_playback_entry (const char *fn);
 void mp3_playback_entry (const char *fn);
 void control_loop(const char *fn, double time);
-
-struct KEYMAP {
-	const int ch;
-	void (*fn)(void);
-};
-
-struct KEYMAP keymap[] = {
-	{ 'p', pause },
-	{ 'u', unpause },
-	{ ':', cmd_line },
-	{ 'q', quit },
-};
 
 #include "controller.c"
 
