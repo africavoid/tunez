@@ -8,25 +8,52 @@
 
 SCR *scr;
 
+static void scr_count (int sec, double raw_time);
+void draw_status(int status);
+void cmd_line (void);
+static void ctrl_free_curses (void);
+static void clear_screen (void);
+static void redraw (void);
+static void draw_decor (void);
+int ctrl_init_curses (const char *fn);
+void pause_control (void);
+void play_settings (void);
+void control_loop (const char *fn, double time);
+
 /* the time counter on the screen */
 static void scr_count (int sec, double raw_time)
 {
 	if (sec <= 60)
-		mvwprintw(scr->win, 1, 0, SECSTR, sec, get_mins(raw_time), get_secs(raw_time));
+	{
+		mvwprintw(scr->win, 1, 2, SECSTR, sec, get_mins(raw_time), get_secs(raw_time));
+		draw_pause(1);
+	}
+
 	else if (sec >= 60)
 	{
 		for (int i = 0; i < strlen(SECSTR); i++)
-			mvwprintw(scr->win, 1, 0, " ");
-		mvwprintw(scr->win, 1, 0, MINSTR, get_mins(sec), get_secs(sec), get_mins(raw_time), get_secs(raw_time));
+			mvwprintw(scr->win, 1, 2, " ");
+		mvwprintw(scr->win, 1, 2, MINSTR, get_mins(sec), get_secs(sec), get_mins(raw_time), get_secs(raw_time));
+		draw_pause(1);
 	}
 
 	wrefresh(scr->win);
 }
 
+/* draws the paused indicator */
+void draw_pause (int status)
+{
+	if (status == 0)
+		mvwprintw(scr->win, 3, 2, "Paused (u)  >>");
+
+	else if (status == 1)
+		mvwprintw(scr->win, 3, 2, "Playing (p) ||");
+}
+
 /* inits the cmd line */
 void cmd_line (void)
 {
-	char *cmd = malloc(1024);
+	char *cmd = (char*)malloc(1024);
 	nodelay(scr->win, false);
 	pause();
 
@@ -52,10 +79,36 @@ static void ctrl_free_curses (void)
 	endwin();
 }
 
-static void draw_decor (const char *fn)
+/* fills the screen with whitespace */
+static void clear_screen (void)
+{
+	for (size_t i = 0; i < scr->max_y; i++)
+		for (size_t k = 0; k < scr->max_x; k++)
+			mvwprintw(scr->win, i, k, " ");
+
+	wrefresh(scr->win);
+}
+
+/* redraws the screen if it's resized */
+static void redraw (void)
+{
+	scr->old_y = scr->max_y;
+	scr->old_x = scr->max_x;
+
+	getmaxyx(stdscr, scr->max_y, scr->max_x);
+
+	if (scr->max_y != scr->old_y || scr->max_x != scr->old_x)
+	{
+		clear_screen();
+		draw_decor();
+	}
+}
+
+/* draws useful info to the screen */
+static void draw_decor (void)
 {
 	box(scr->win, 0, 0);
-	mvwprintw(scr->win, 2, 2, "Playing %s", fn);
+	mvwprintw(scr->win, 2, 2, "Playing %s", scr->file_name);
 	wrefresh(scr->win);
 }
 
@@ -64,13 +117,16 @@ int ctrl_init_curses (const char *fn)
 {
 	if (initscr() == NULL) return 1;
 
-	scr = malloc(sizeof(*scr));
+	scr = (void*)malloc(sizeof(*scr));
 
 	if (scr == NULL)
 	{
 		printe("malloc (scr) ctrl_init_curses");
 		return 1;
 	}
+
+	/* setting file name for output */
+	scr->file_name = strndup(fn, strlen(fn));
 
 	/* create a basic curses window */
 	getmaxyx(stdscr, scr->max_y, scr->max_x);
@@ -83,7 +139,7 @@ int ctrl_init_curses (const char *fn)
 	nodelay(scr->win, true);
 
 	/* some decor */
-	draw_decor(fn);
+	draw_decor();
 	return 0;
 }
 
@@ -91,8 +147,12 @@ void pause_control (void)
 {
 	int ch;
 
+	draw_pause(0);
+
 	while ((ch = wgetch(scr->win)) != 'u')
 		parse_keys(ch);
+
+	draw_pause(1);
 }
 
 void play_settings (void)
@@ -119,8 +179,16 @@ void control_loop (const char *fn, double time)
 	
 		if (ch == 'h') audio_position(i--);
 		else if (ch == 'l') audio_position(i++);
+
 		parse_keys(ch);
+
+		/* display the timer on the screen */
 		scr_count((int) i, time);
+
+		/* redraw the screen if it's dimensions have changed */ 
+		redraw();
+
+		/* pause SDL for 1 second */
 		SDL_Delay(SECOND);
 	}
 

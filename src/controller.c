@@ -96,7 +96,6 @@ void pause (void)
 		Mix_PauseMusic();
 
 	pause_control();
-
 	
 	play_settings();
 	unpause();

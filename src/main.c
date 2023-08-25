@@ -16,6 +16,8 @@ const char *valid_ex[] = {
 	".mp3",
 };
 
+static int scan_args (char ch);
+
 /* flag variables */
 bool background_f = false;
 bool help_f = false;
@@ -25,21 +27,19 @@ bool shuffle_f = false;
 bool is_wav_f = false;
 bool is_mp3_f = false;
 
-/* used to represent no flags 
- * if args are supplied but no flags
- * the program will fail */
-bool NULL_f = true;
-
 /* file that will be played */
 char *file_name;
 char *dir_name;
+
+/* where the file is in the cmd line args */
+int file_index = 0;
 
 /* simple help function */
 static int help (void)
 {
 	fprintf(stdout, "USAGE:\n");
 	fprintf(stdout, "-p [file] to play a file\n");
-	fprintf(stdout, "-P [directory] to play through a dir/playlist\n");
+	fprintf(stdout, "-f [directory] to play through a dir/playlist\n");
 	fprintf(stdout, "-b to run in background\n");
 	fprintf(stdout, "Supported file types:\n");
 	fprintf(stdout, "\twav\n\tmp3\n");
@@ -145,61 +145,47 @@ static int set_file (char *name)
 	return 0;
 }
 
-/* scans command line args and sets bools */
-static int scan_args (char *argv[])
+/* goes through argv[] for args */
+static int parse_args (char *argv[])
 {
-	int file_index = 0;
 
-	/* scanning args */
-	for (size_t i = 0; argv[i] != NULL; i++)
-		if (argv[i][0] == '-' && argv[i][2] == (char) 0)
-			switch (argv[i][1])
+	for (size_t i = 1; argv[i] != NULL; i++)
+		for (size_t k = 0; argv[i][k] != (char) 0; k++)
+			if (argv[i][0] == '-')
 			{
-				case 'p':
-					playback_f = true;
-					file_index = i+1;
-					NULL_f = false;
-					break;
-				case 'h':
-					help_f = true;
-					NULL_f = false;
-					break;
-				case 'b':
-					background_f = true;
-					NULL_f = false;
-					break;
-				case 'P':
-					playlist_f = true;
-					file_index = i+1;
-					NULL_f = false;
-					break;
-				case 'S':
-					shuffle_f = true;
-					break;
-				default:
-					fprintf(stderr, "ERROR: No such arg %s\n", argv[i]);
-					return 1;
+				if (scan_args(argv[i][k]) != 0) return 1;
+
+				else file_index++;
 			}
-		else if (argv[i][0] == '-' && argv[i][2] != (char) 0)
-		{
-			fprintf(stderr, "ERROR: No such arg %s\n", argv[i]);
+
+	return 0;
+}
+
+/* scans command line args and sets bools */
+static int scan_args (char ch)
+{
+	switch (ch)
+	{
+		case 'p':
+			playback_f = true;
+			break;
+		case 'h':
+			help_f = true;
+			break;
+		case 'b':
+			background_f = true;
+			break;
+		case 'f':
+			playlist_f = true;
+			break;
+		case 'S':
+			shuffle_f = true;
+			break;
+		case '-':
+			break;
+		default:
+			fprintf(stderr, "ERROR: No such flag %c\n", ch);
 			return 1;
-		}
-
-	if (playlist_f == true)
-	{
-		if (set_dir(argv[file_index]) != 0)
-		{
-			NULL_f = true;
-			return 0;
-		}
-	}
-
-	else if (set_file(argv[file_index]) != 0) 
-	{
-		playback_f = false;
-		NULL_f = true;
-		return 1;
 	}
 
 	return 0;
@@ -207,20 +193,14 @@ static int scan_args (char *argv[])
 
 static int flag_parser (void)
 {
-	if (NULL_f == true)
-	{
-		printe("no flags supplied, see -h");
-		return 1;
-	}
-
 	if (help_f == true) return help();
 
 	if (playlist_f == true)
 		playlist_entry(dir_name, shuffle_f);
-	else if (playback_f != true) return 1;
 
 	if (is_wav_f == true)
 		wav_playback_entry(file_name);
+
 	else if (is_mp3_f == true)
 		mp3_playback_entry(file_name);
 
@@ -240,9 +220,16 @@ static int setup (int argc, char *argv[])
 		return 1;
 	}
 	
-	if (argc < 2) return help();
+	if (argc < 3) return help();
 
-	if (scan_args(argv) != 0) return 1;
+	/* going through cmd line args */
+	if (parse_args(argv) != 0) return 1;
+
+	if (playlist_f == true)
+		set_dir(argv[file_index]);
+
+	/* setting the name of the file */
+	else if (set_file(argv[file_index]) != 0) return 1;
 
 	return flag_parser();
 }
